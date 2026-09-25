@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PAPinho - IFSP/CJO</title>
+    <style>
+        /* PALETA DE CORES IFSP E ESTILOS GERAIS */
+        :root {
+            --ifsp-verde: #2F9E41;
+            --ifsp-verde-escuro: #247A32;
+            --ifsp-vermelho: #CD192E;
+            --cor-fundo: #443;
+            --cor-texto: #333;
+            --cor-borda: #ccc;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--cor-fundo);
+            color: var(--cor-texto);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: #fcfdf8;
+            padding: 30px 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 750px;
+            border-top: 5px solid var(--ifsp-verde); /* Detalhe verde no topo */
+            display: flex;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        header h1 {
+            color: var(--ifsp-verde);
+            font-size: 24px;
+            margin: 0 0 5px 0;
+        }
+
+        header p {
+            font-size: 14px;
+            color: #666;
+            margin: 0;
+        }
+
+        /* ESTILOS DO FORMULÁRIO */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        /* O enctype multipart/form-data é obrigatório para envio de arquivos */
+        input[type="file"],
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--cor-borda);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+            background-color: #fff;
+        }
+
+        input[type="file"]:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--ifsp-verde);
+            box-shadow: 0 0 0 2px rgba(47, 158, 65, 0.2); /* Brilho verde ao focar */
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--ifsp-verde);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .btn-submit:hover {
+            background-color: var(--ifsp-verde-escuro);
+        }
+
+        .btn-submit:disabled {
+            background-color: #999;
+            cursor: not-allowed;
+        }
+
+        /* ÁREA DE FEEDBACK (MENSAGENS DO PYTHON) */
+        .feedback-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            font-size: 14px;
+            text-align: center;
+            display: none; /* Escondido por padrão */
+        }
+
+        .feedback-box.show {
+            display: block;
+        }
+
+        .feedback-box.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .feedback-box.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div>
+            <img src="mascott.jpg">
+        </div>
+        <div>
+            <header>
+                <h1>PAPinho - IFSP/CJO</h1>
+                <p>Organizador de dados do Programa de Auxílio a Permanência</p>
+            </header>
+
+            <form id="formBoletim" action="geraPlan.py" method="POST" enctype="multipart/form-data">
+
+                <div class="form-group">
+                    <label for="arquivo_mapa">Planilha dos Dados para a CCF (.xlsx):</label>
+                    <input type="file" id="arquivo_mapa" name="arquivo_mapa" accept=".xls, .xlsx, .csv, .ods" required>
+                </div>
+
+
+                <button type="submit" id="btnGerar" class="btn-submit">Gerar Planilha</button>
+            </form>
+
+            <div id="feedback" class="feedback-box"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('formBoletim').addEventListener('submit', async function(e) {
+            e.preventDefault(); // Impede o recarregamento da tela
+
+            const form = e.target;
+            const btn = document.getElementById('btnGerar');
+            const feedback = document.getElementById('feedback');
+
+            // Prepara a tela para o carregamento
+            btn.disabled = true;
+            btn.textContent = "Gerando, aguarde...";
+            feedback.className = 'feedback-box'; // Reseta as classes
+            feedback.textContent = "";
+
+            try {
+                const response = await fetch(form.action, {
+                    method: form.method,
+                    body: new FormData(form)
+                });
+
+                if (response.ok) {
+                    // Agora lemos a resposta como JSON
+                    const data = await response.json();
+
+                    // Montamos a mensagem + o botão de download apontando para a rota nova
+                    feedback.innerHTML = `
+                        <strong>${data.mensagem}</strong><br><br>
+                        <a href="download/${data.arquivo}" style="
+                            display: inline-block;
+                            padding: 10px 20px;
+                            background-color: #2F9E41;
+                            color: white;
+                            text-decoration: none;
+                            border-radius: 4px;
+                            font-weight: bold;
+                        " target="_blank">Baixar Planilha Gerada</a>
+                    `;
+                    feedback.classList.add('show', 'success');
+                } else {
+                    // Em caso de erro, lemos o JSON de erro
+                    const errorData = await response.json();
+                    feedback.textContent = "Erro ao gerar: " + (errorData.erro || "Desconhecido.");
+                    feedback.classList.add('show', 'error');
+                }
+            } catch (error) {
+                feedback.textContent = "Falha na comunicação com o script Python.";
+                feedback.classList.add('show', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Gerar Planilha";
+            }
+        });
+    </script>
+</body>
+</html>
